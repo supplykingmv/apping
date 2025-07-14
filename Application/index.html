@@ -3,12 +3,136 @@
 <head>
   <meta charset="UTF-8">
   <title>Keystroke Recorder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #f4f6fb;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .header {
+      width: 100vw;
+      background: #3f51b5;
+      color: #fff;
+      padding: 1.2rem 0;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      box-shadow: 0 2px 8px rgba(63,81,181,0.08);
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(60,72,100,0.12);
+      padding: 2rem 2.5rem 2.5rem 2.5rem;
+      max-width: 400px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .share-section {
+      width: 100%;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .share-section input {
+      width: 80%;
+      padding: 0.5rem;
+      border: 1px solid #cfd8dc;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      background: #f7f9fa;
+      color: #333;
+    }
+    .share-section button {
+      background: #3f51b5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 1.2rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-left: 0.5rem;
+    }
+    .share-section button:active {
+      background: #283593;
+    }
+    .keystrokes-title {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #3f51b5;
+      letter-spacing: 1px;
+    }
+    #keystrokes {
+      list-style: none;
+      padding: 0;
+      width: 100%;
+      min-height: 40px;
+      margin: 0;
+    }
+    #keystrokes li {
+      background: #f7f9fa;
+      margin-bottom: 0.5rem;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      color: #333;
+      box-shadow: 0 1px 4px rgba(60,72,100,0.06);
+      opacity: 1;
+      transition: background 0.3s, box-shadow 0.3s, opacity 0.5s;
+      position: relative;
+    }
+    #keystrokes li.new {
+      background: #e3f2fd;
+      box-shadow: 0 2px 8px rgba(33,150,243,0.12);
+      animation: highlight 1s;
+    }
+    @keyframes highlight {
+      0% { background: #bbdefb; }
+      100% { background: #e3f2fd; }
+    }
+    .footer {
+      margin-top: 2rem;
+      color: #888;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+    @media (max-width: 500px) {
+      .card {
+        padding: 1rem 0.5rem 1.5rem 0.5rem;
+        max-width: 98vw;
+      }
+      .header {
+        font-size: 1.3rem;
+        padding: 0.7rem 0;
+      }
+      .share-section input {
+        width: 70%;
+        font-size: 0.95rem;
+      }
+      .share-section button {
+        font-size: 0.95rem;
+        padding: 0.4rem 0.8rem;
+      }
+    }
+  </style>
   <script type="module">
-    // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getFirestore, collection, addDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCzBntT2pTBhDwYxQJj2sVQG9VzvzdWV8c",
       authDomain: "shareable-2ec0f.firebaseapp.com",
@@ -18,11 +142,9 @@
       appId: "1:965298003271:web:7d46fd3ac9bbce285b4062"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Helper to get or create sessionId
     function getSessionId() {
       const urlParams = new URLSearchParams(window.location.search);
       let sessionId = urlParams.get('sessionId');
@@ -36,7 +158,6 @@
     const sessionId = getSessionId();
     document.getElementById('session-link').value = window.location.href;
 
-    // Record keystrokes
     document.addEventListener("keydown", async (event) => {
       await addDoc(collection(db, "keystrokes"), {
         key: event.key,
@@ -45,39 +166,48 @@
       });
     });
 
-    // Display keystrokes for this session
     const keystrokesList = document.getElementById('keystrokes');
     const q = query(collection(db, "keystrokes"), where("sessionId", "==", sessionId));
+    let lastCount = 0;
     onSnapshot(q, (querySnapshot) => {
-      keystrokesList.innerHTML = "";
       const sorted = querySnapshot.docs
         .map(doc => doc.data())
         .sort((a, b) => a.timestamp - b.timestamp);
-      for (const data of sorted) {
+      keystrokesList.innerHTML = "";
+      sorted.forEach((data, idx) => {
         const li = document.createElement('li');
         li.textContent = `${data.key} (${new Date(data.timestamp).toLocaleTimeString()})`;
+        if (idx >= lastCount) {
+          li.classList.add('new');
+          setTimeout(() => li.classList.remove('new'), 1200);
+        }
         keystrokesList.appendChild(li);
-      }
+      });
+      lastCount = sorted.length;
     });
 
-    // Copy link button
     document.getElementById('copy-link').onclick = function() {
       const link = document.getElementById('session-link');
       link.select();
       document.execCommand('copy');
-      alert('Link copied!');
+      this.textContent = 'Copied!';
+      setTimeout(() => { this.textContent = 'Copy Link'; }, 1200);
     };
   </script>
 </head>
 <body>
-  <h1>Keystroke Recorder</h1>
-  <p>
-    Share this link to record keystrokes for this session:<br>
-    <input id="session-link" style="width:80%" readonly>
-    <button id="copy-link">Copy Link</button>
-  </p>
-  <h2>Keystrokes for this session:</h2>
-  <ul id="keystrokes"></ul>
-  <p><em>Open this link on another device to record keystrokes from there as well.</em></p>
+  <div class="header">Keystroke Recorder</div>
+  <div class="card">
+    <div class="share-section">
+      <div>Share this link to record keystrokes for this session:</div>
+      <input id="session-link" readonly>
+      <button id="copy-link">Copy Link</button>
+    </div>
+    <div class="keystrokes-title">Keystrokes for this session:</div>
+    <ul id="keystrokes"></ul>
+  </div>
+  <div class="footer">
+    <em>Open this link on another device to record keystrokes from there as well.</em>
+  </div>
 </body>
 </html> 
